@@ -106,7 +106,7 @@ func TestStoreRangeSplitBetweenConfigPrefix(t *testing.T) {
 		t.Fatalf("%q: split unexpected error: %s", key, err)
 	}
 
-	if err := store.MaybeGossipConfigs(); err != nil {
+	if err := store.MaybeGossipConfigs(true); err != nil {
 		t.Fatalf("error gossiping configs: %s", err)
 	}
 }

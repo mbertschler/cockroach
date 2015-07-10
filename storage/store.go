@@ -594,7 +594,7 @@ func (s *Store) startGossip() {
 
 	s.initComplete.Add(1)
 	s.stopper.RunWorker(func() {
-		if err := s.MaybeGossipConfigs(); err != nil {
+		if err := s.MaybeGossipConfigs(true); err != nil {
 			log.Warningc(ctx, "error gossiping configs: %s", err)
 		}
 		s.initComplete.Done()
@@ -603,7 +603,7 @@ func (s *Store) startGossip() {
 		for {
 			select {
 			case <-ticker.C:
-				if err := s.MaybeGossipConfigs(); err != nil {
+				if err := s.MaybeGossipConfigs(false); err != nil {
 					log.Warningc(ctx, "error gossiping configs: %s", err)
 				}
 			case <-s.stopper.ShouldStop():
@@ -632,7 +632,7 @@ func (s *Store) maybeGossipFirstRange() error {
 // and a new leader lease is only acquired if needed. To account for this rare
 // scenario, we activate the very few ranges that hold config maps
 // periodically.
-func (s *Store) MaybeGossipConfigs() error {
+func (s *Store) MaybeGossipConfigs(force bool) error {
 	for _, cd := range configDescriptors {
 		rng := s.LookupRange(cd.keyPrefix, nil)
 		if rng == nil {
@@ -647,12 +647,14 @@ func (s *Store) MaybeGossipConfigs() error {
 		if _, err := rng.getLeaseForGossip(s.Context(nil)); err != nil {
 			return err
 		}
-		// Always gossip the configs as there are leader lease acquisition
-		// scenarios in which the config is not gossiped (e.g. leader executes
-		// but crashes before gossiping; comes back up but group goes dormant).
-		rng.maybeGossipConfigs(func(configPrefix proto.Key) bool {
-			return bytes.Equal(configPrefix, cd.keyPrefix)
-		})
+		// Configs are gossiped immediately when forced. Otherwise, configs
+		// will be gossiped when they are updated or a leader lease is
+		// acquired/extended.
+		if force {
+			rng.maybeGossipConfigs(func(configPrefix proto.Key) bool {
+				return bytes.Equal(configPrefix, cd.keyPrefix)
+			})
+		}
 	}
 	return nil
 }
