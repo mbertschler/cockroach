@@ -149,6 +149,9 @@ func TestCreateTable(t *testing.T) {
 	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users " + cols); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec("CREATE TABLE employees " + cols); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestShowTables(t *testing.T) {
